@@ -151,7 +151,7 @@ export class GqlLoggingInterceptor implements NestInterceptor {
     const options: LogOptions | undefined = Reflect.getMetadata(METHOD_LOG_METADATA, context.getHandler());
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const maskedBody = options?.mask?.request ? this.maskData(body, options.mask.request) : body;
+    const maskedBody = options?.mask?.request ? this.maskQuery(body, options.mask.request) : body;
     const maskedHeaders = this.maskHeaders(headers);
 
     this.logger.log(
@@ -183,7 +183,7 @@ export class GqlLoggingInterceptor implements NestInterceptor {
    */
   private logNext(body: unknown, context: ExecutionContext): void {
     const req: Request = GqlExecutionContext.create(context).getContext().req;
-    const res: Response = GqlExecutionContext.create(context).getContext().res;
+    const res: Response = GqlExecutionContext.create(context).getContext().req.res;
     const { method, url } = req;
     const { statusCode } = res;
     const ctx: string = `${this.userPrefix}${this.ctxPrefix} - ${statusCode} - ${method} - ${url}`;
@@ -254,6 +254,55 @@ export class GqlLoggingInterceptor implements NestInterceptor {
         `${this.userPrefix}${this.ctxPrefix} - ${method} - ${url}`,
       );
     }
+  }
+
+  private maskQuery(data: { query: string }, maskingOptions: string[] | true): unknown {
+    if (this.disableMasking) {
+      return data;
+    }
+
+    if (maskingOptions === true) {
+      return {
+        query: this.maskingPlaceholder,
+      };
+    }
+
+    const tokens = data.query.split(/(:)/).map(item => item.split(/([()\s{}[\]])/)).flat().filter(item => !!item.trim())
+
+    if (typeof this.maskingPlaceholder === 'string') {
+      const openingBrackets = ['(', '{', '['] as const;
+      type OpeningBracket = typeof openingBrackets[number];
+
+      const bracketPair: Record<OpeningBracket, string> = {
+        '(': ')',
+        '{': '}',
+        '[': ']'
+      }
+
+      const isOpeningBracket = (token: string): token is OpeningBracket => openingBrackets.includes(token as OpeningBracket);
+
+      for (const mask of maskingOptions) {
+        let maskIndex = tokens.findIndex(token => token === mask)
+        if (maskIndex !== -1) {
+          maskIndex += 2;
+          const token = tokens[maskIndex];
+          if (isOpeningBracket(token)) {
+            maskIndex += 1;
+            tokens[maskIndex] = this.maskingPlaceholder
+            maskIndex += 1;
+            while (tokens[maskIndex] !== bracketPair[token]) {
+              tokens.splice(maskIndex, 1);
+            }
+          } else {
+            tokens[maskIndex] = this.maskingPlaceholder
+          }
+        }
+      }
+    }
+
+    return {
+      query: tokens.join(' ')
+    };
   }
 
   /**

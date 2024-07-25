@@ -1,54 +1,57 @@
 /* eslint-disable */
-import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Param, Post } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { Log } from '../../../src';
-import { CreateCatDto } from './create-cat.dto';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Cat } from '../models/cat.model';
+import { CreatePasswordArgs } from '../dto/create-password.args';
+import { CreateCatInput } from '../dto/create-cat.input';
 
 /**
- * Controller: /cats
+ * Resolver: /cats
  */
-@Controller('cats')
-export class CatsController {
+@Resolver(() => Cat)
+export class CatsResolver {
   /**
    * Fetching cats ok
    */
-  @Get('ok')
+  @Query(() => String)
   public ok(): string {
     return 'This action returns all cats';
   }
   /**
    * Fetching bad request
    */
-  @Get('badrequest')
+  @Query(() => String)
   public badRequest(): string {
     throw new BadRequestException();
   }
   /**
    * Fetching internalerror
    */
-  @Get('internalerror')
-  public internalerror(): string {
+  @Query(() => String)
+  public internalError(): string {
     throw new InternalServerErrorException();
   }
 
   /**
    * Create a cat
    */
-  @Post()
+  @Mutation(() => Cat)
   @Log({
     mask: {
       request: ['birthdate', 'interests.description', 'address', 'enemies'],
       response: ['id', 'birthdate', 'interests.description', 'address', 'enemies'],
     },
   })
-  public createCat(@Body() payload: CreateCatDto) {
+  public createCat(@Args('payload') payload: CreateCatInput) {
     if (payload.name === 'dog') {
-      throw new BadRequestException({ message: 'You cannot name a cat dog' });
+      throw new BadRequestException('You cannot name a cat dog');
     }
 
     return { id: 1, ...payload };
   }
 
-  @Get()
+  @Query(() => [Cat])
   @Log({
     mask: {
       response: ['interests.description', 'unknownProperty'],
@@ -75,9 +78,9 @@ export class CatsController {
   /**
    * Create a password for a cat
    */
-  @Post(':id/password')
+  @Mutation(() => String)
   @Log({ mask: { request: true, response: true } })
-  public createPassword(@Param('id') id: string, @Body() payload: { password: string }) {
-    return `The password for cat ${id} is ${payload.password}`;
+  public createPassword(@Args() payload: CreatePasswordArgs) {
+    return `The password for cat ${payload.id} is ${payload.password}`;
   }
 }

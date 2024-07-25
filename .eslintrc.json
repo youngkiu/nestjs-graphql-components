@@ -6,6 +6,8 @@
         "camelcase": "off",
         "@typescript-eslint/naming-convention": "off",
         "@typescript-eslint/tslint/config": "off",
-        "prefer-arrow/prefer-arrow-functions": "off"
+        "prefer-arrow/prefer-arrow-functions": "off",
+        "import/no-extraneous-dependencies": "off",
+        "max-classes-per-file": "off",
     }
 }
