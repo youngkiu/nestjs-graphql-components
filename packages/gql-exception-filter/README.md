@@ -6,7 +6,7 @@
   A <a href="https://github.com/nestjs/nest">Nest</a> http exception filter.
 </p>
 
-# NestJS Http Exception Filter
+# NestJS GraphQL Exception Filter
 
 A simple NestJS Http [Exception Filter](https://docs.nestjs.com/exception-filters) logging the HTTP response and formatting errors returned by the API.
 
