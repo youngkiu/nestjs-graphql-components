@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
+import { CatsResolver } from './cats.resolver';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { CatsResolver } from './cats.resolver';
 
 // @ts-ignore
 /**
@@ -11,7 +11,7 @@ import { CatsResolver } from './cats.resolver';
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: true
+      autoSchemaFile: true,
     }),
   ],
   providers: [CatsResolver],

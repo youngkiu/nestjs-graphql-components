@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateCatDto } from './create-cat.dto';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 

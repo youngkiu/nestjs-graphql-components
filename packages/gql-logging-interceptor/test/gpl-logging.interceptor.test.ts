@@ -1,4 +1,4 @@
-/* eslint-disable max-lines, import/no-extraneous-dependencies */
+/* eslint-disable max-lines */
 import {
   BadRequestException,
   HttpStatus,
@@ -44,11 +44,13 @@ describe('GraphQL Logging interceptor', () => {
         .post('/graphql')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const resCtx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
@@ -87,30 +89,30 @@ describe('GraphQL Logging interceptor', () => {
         .post('/graphql')
         .send({ query: '{ badRequest }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          errors: [
-            {
-              extensions: {
-                code: 'BAD_REQUEST',
-                originalError: {
-                  message: 'Bad Request',
-                  statusCode: HttpStatus.BAD_REQUEST,
-                }
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'BAD_REQUEST',
+                  originalError: {
+                    message: 'Bad Request',
+                    statusCode: HttpStatus.BAD_REQUEST,
+                  },
+                },
+                locations: [
+                  {
+                    column: 3,
+                    line: 1,
+                  },
+                ],
+                message: 'Bad Request',
+                path: ['badRequest'],
               },
-              locations: [
-                {
-                  column: 3,
-                  line: 1,
-                }
-              ],
-              message: 'Bad Request',
-              path: [
-                'badRequest',
-              ],
-            }
-          ],
-          data: null
-        }));
+            ],
+            data: null,
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const resCtx: string = `GqlLoggingInterceptor - 400 - POST - ${url}`;
@@ -156,31 +158,31 @@ describe('GraphQL Logging interceptor', () => {
         .post('/graphql')
         .send({ query: '{ internalError }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          errors: [
-            {
-              extensions: {
-                code: 'INTERNAL_SERVER_ERROR',
-                originalError: {
-                  message: 'Internal Server Error',
-                  statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'INTERNAL_SERVER_ERROR',
+                  originalError: {
+                    message: 'Internal Server Error',
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                  },
+                  status: HttpStatus.INTERNAL_SERVER_ERROR,
                 },
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                locations: [
+                  {
+                    column: 3,
+                    line: 1,
+                  },
+                ],
+                message: 'Internal Server Error',
+                path: ['internalError'],
               },
-              locations: [
-                {
-                  column: 3,
-                  line: 1,
-                }
-              ],
-              message: 'Internal Server Error',
-              path: [
-                'internalError',
-              ],
-            }
-          ],
-          data: null
-        }));
+            ],
+            data: null,
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const resCtx: string = `GqlLoggingInterceptor - 500 - POST - ${url}`;
@@ -232,24 +234,26 @@ describe('GraphQL Logging interceptor', () => {
             'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createCat: {
-              id: 1,
-              name: 'Tom',
-              birthdate: '1980-01-01',
-              enemies: ['Jerry', 'Titi'],
-              interests: [
-                { description: 'Eating Jerry', level: 'HIGH' },
-                { description: 'Sleeping', level: 'MEDIUM' },
-              ],
-              address: {
-                city: 'New York',
-                country: 'USA',
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+                enemies: ['Jerry', 'Titi'],
+                interests: [
+                  { description: 'Eating Jerry', level: 'HIGH' },
+                  { description: 'Sleeping', level: 'MEDIUM' },
+                ],
+                address: {
+                  city: 'New York',
+                  country: 'USA',
+                },
               },
-            }
-          }
-        }));
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const incomingMsg: string = `Incoming request - POST - ${url}`;
@@ -275,14 +279,16 @@ describe('GraphQL Logging interceptor', () => {
       await request(app.getHttpServer())
         .post('/graphql')
         .send({
-          query: 'mutation { createPassword ( id: "1" password: "secret password" ) }',
+          query: 'mutation { createPassword ( id: 1 password: "secret password" ) }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createPassword: 'The password for cat 1 is secret password'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createPassword: 'The password for cat 1 is secret password',
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const incomingMsg: string = `Incoming request - POST - ${url}`;
@@ -310,24 +316,26 @@ describe('GraphQL Logging interceptor', () => {
             'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createCat: {
-              id: 1,
-              name: 'Tom',
-              birthdate: '1980-01-01',
-              enemies: ['Jerry', 'Titi'],
-              interests: [
-                { description: 'Eating Jerry', level: 'HIGH' },
-                { description: 'Sleeping', level: 'MEDIUM' },
-              ],
-              address: {
-                city: 'New York',
-                country: 'USA',
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+                enemies: ['Jerry', 'Titi'],
+                interests: [
+                  { description: 'Eating Jerry', level: 'HIGH' },
+                  { description: 'Sleeping', level: 'MEDIUM' },
+                ],
+                address: {
+                  city: 'New York',
+                  country: 'USA',
+                },
               },
-            }
-          }
-        }));
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
       const outgoingMsg: string = `Outgoing response - 200 - POST - ${url}`;
@@ -359,14 +367,16 @@ describe('GraphQL Logging interceptor', () => {
       await request(app.getHttpServer())
         .post('/graphql')
         .send({
-          query: 'mutation { createPassword ( id: "1" password: "secret password" ) }',
+          query: 'mutation { createPassword ( id: 1 password: "secret password" ) }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createPassword: 'The password for cat 1 is secret password'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createPassword: 'The password for cat 1 is secret password',
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
       const outgoingMsg: string = `Outgoing response - 200 - POST - ${url}`;
@@ -425,18 +435,21 @@ describe('GraphQL Logging interceptor', () => {
         address: { country: 'USA', city: 'New York' },
       };
       const newCatQuery = {
-        query: 'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }'
-      }
+        query:
+          'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
+      };
 
       await request(app.getHttpServer())
         .post('/graphql')
         .send(newCatQuery)
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createCat: { ...newCat, id: 1 }
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: { ...newCat, id: 1 },
+            },
+          }),
+        );
 
       expect(logSpy).toBeCalledTimes(2);
       expect(logSpy.mock.calls[0][0].body).toEqual(newCatQuery);
@@ -460,15 +473,17 @@ describe('GraphQL Logging interceptor', () => {
           query: 'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" } ) { id name birthdate } }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            createCat: {
-              id: 1,
-              name: 'Tom',
-              birthdate: '1980-01-01',
-            }
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+              },
+            },
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const incomingMsg: string = `Incoming request - POST - ${url}`;
@@ -477,7 +492,8 @@ describe('GraphQL Logging interceptor', () => {
       expect(logSpy.mock.calls[0]).toEqual([
         {
           body: {
-            query: 'mutation { createCat ( payload : { name : "Tom" birthdate : "1980-01-01" } ) { id name birthdate } }'
+            query:
+              'mutation { createCat ( payload : { name : "Tom" birthdate : "1980-01-01" } ) { id name birthdate } }',
           },
           headers: expect.any(Object),
           message: incomingMsg,
@@ -499,31 +515,31 @@ describe('GraphQL Logging interceptor', () => {
           query: 'mutation { createCat ( payload: { name: "dog" birthdate: "1980-01-01" } ) { id name birthdate } }',
         })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          errors: [
-            {
-              extensions: {
-                code: 'BAD_REQUEST',
-                originalError: {
-                  error: 'Bad Request',
-                  message: 'You cannot name a cat dog',
-                  statusCode: HttpStatus.BAD_REQUEST,
-                }
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'BAD_REQUEST',
+                  originalError: {
+                    error: 'Bad Request',
+                    message: 'You cannot name a cat dog',
+                    statusCode: HttpStatus.BAD_REQUEST,
+                  },
+                },
+                locations: [
+                  {
+                    column: 12,
+                    line: 1,
+                  },
+                ],
+                message: 'You cannot name a cat dog',
+                path: ['createCat'],
               },
-              locations: [
-                {
-                  column: 12,
-                  line: 1,
-                }
-              ],
-              message: 'You cannot name a cat dog',
-              path: [
-                'createCat',
-              ],
-            }
-          ],
-          data: null
-        }));
+            ],
+            data: null,
+          }),
+        );
 
       const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
       const incomingMsg: string = `Incoming request - POST - ${url}`;
@@ -589,11 +605,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'access-token')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toEqual(placeholder);
     });
@@ -620,11 +638,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'Bearer JWT')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toEqual({
         type: 'Bearer',
@@ -642,11 +662,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'Bearer JWT')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
     });
@@ -661,11 +683,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'Bearer JWT')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
     });
@@ -679,11 +703,13 @@ describe('GraphQL Logging interceptor', () => {
         .post('/graphql')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toBeUndefined();
     });
@@ -704,11 +730,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'Bearer JWT')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toBe(placeholder);
     });
@@ -724,11 +752,13 @@ describe('GraphQL Logging interceptor', () => {
         .set('authorization', 'Bearer JWT')
         .send({ query: '{ ok }' })
         .expect(HttpStatus.OK)
-        .expect(({ body }) => expect(body).toEqual({
-          data: {
-            ok: 'This action returns all cats'
-          }
-        }));
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
 
       expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
     });

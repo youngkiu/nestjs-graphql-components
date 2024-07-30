@@ -267,41 +267,46 @@ export class GqlLoggingInterceptor implements NestInterceptor {
       };
     }
 
-    const tokens = data.query.split(/(:)/).map(item => item.split(/([()\s{}[\]])/)).flat().filter(item => !!item.trim())
+    const tokens = data.query
+      .split(/(:)/)
+      .map((item) => item.split(/([()\s{}[\]])/))
+      .flat()
+      .filter((item) => !!item.trim());
 
     if (typeof this.maskingPlaceholder === 'string') {
       const openingBrackets = ['(', '{', '['] as const;
-      type OpeningBracket = typeof openingBrackets[number];
+      type OpeningBracket = (typeof openingBrackets)[number];
 
       const bracketPair: Record<OpeningBracket, string> = {
         '(': ')',
         '{': '}',
-        '[': ']'
-      }
+        '[': ']',
+      };
 
-      const isOpeningBracket = (token: string): token is OpeningBracket => openingBrackets.includes(token as OpeningBracket);
+      const isOpeningBracket = (token: string): token is OpeningBracket =>
+        openingBrackets.includes(token as OpeningBracket);
 
       for (const mask of maskingOptions) {
-        let maskIndex = tokens.findIndex(token => token === mask)
+        let maskIndex = tokens.findIndex((token) => token === mask);
         if (maskIndex !== -1) {
           maskIndex += 2;
           const token = tokens[maskIndex];
           if (isOpeningBracket(token)) {
             maskIndex += 1;
-            tokens[maskIndex] = this.maskingPlaceholder
+            tokens[maskIndex] = this.maskingPlaceholder;
             maskIndex += 1;
             while (tokens[maskIndex] !== bracketPair[token]) {
               tokens.splice(maskIndex, 1);
             }
           } else {
-            tokens[maskIndex] = this.maskingPlaceholder
+            tokens[maskIndex] = this.maskingPlaceholder;
           }
         }
       }
     }
 
     return {
-      query: tokens.join(' ')
+      query: tokens.join(' '),
     };
   }
 

@@ -1,4 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { HttpArgumentsHost } from '@nestjs/common/interfaces';
+import { Response } from 'express';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { GqlArgumentsHost, GqlContextType } from '@nestjs/graphql';
 import { get } from 'lodash';
@@ -18,13 +20,44 @@ export class GqlExceptionFilter implements ExceptionFilter {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public catch(exception: any, host: ArgumentsHost): void {
-    if (host.getType<GqlContextType>() !== 'graphql') {
-      this.logger.error('GqlExceptionFilter should be used only for GraphQL context');
-      throw exception;
-    }
+    const hostType = host.getType<GqlContextType>();
 
-    const ctx = GqlArgumentsHost.create(host);
-    const request: Request = ctx.getContext().req;
+    switch (hostType) {
+      case 'http':
+        {
+          const ctx: HttpArgumentsHost = host.switchToHttp();
+          const request: Request = ctx.getRequest();
+          const response: Response = ctx.getResponse();
+
+          const { code, message, status } = this.getErrorMessageCodeStatus(exception, request);
+
+          response.status(status).send({
+            code,
+            message,
+            status,
+          });
+        }
+        break;
+
+      case 'graphql': {
+        const ctx: GqlArgumentsHost = GqlArgumentsHost.create(host);
+        const request: Request = ctx.getContext().req;
+
+        const { code, message, status } = this.getErrorMessageCodeStatus(exception, request);
+
+        throw new GraphQLError(message, { extensions: { code, status } });
+      }
+
+      default:
+        this.logger.error({ message: 'Unknown host type' });
+        throw exception;
+    }
+  }
+
+  private getErrorMessageCodeStatus(
+    exception: any,
+    request: Request,
+  ): { code: string; message: string; status: number } {
     let status: number;
 
     if (exception instanceof HttpException) {
@@ -67,6 +100,7 @@ export class GqlExceptionFilter implements ExceptionFilter {
         headers: request.headers,
       });
     }
-    throw new GraphQLError(message, { extensions: { code, status } });
+
+    return { message, code, status };
   }
 }
