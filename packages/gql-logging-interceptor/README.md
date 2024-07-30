@@ -6,7 +6,7 @@
   A <a href="https://github.com/nestjs/nest">Nest</a> interceptor to log the incoming/outgoing requests.
 </p>
 
-# NestJS Logging interceptor
+# NestJS GraphQL Logging interceptor
 
 A simple NestJS interceptor catching request details and logging it using the built-in [Logger](https://docs.nestjs.com/techniques/logger#logger) class. It will use the default Logger implementation unless you pass your own to your Nest application.
 
