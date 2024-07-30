@@ -1,0 +1,47 @@
+{
+  "name": "@algoan/nestjs-gql-exception-filter",
+  "version": "1.0.21",
+  "description": "A simple http exception filter for NestJS applications",
+  "keywords": [
+    "nestjs",
+    "typescript",
+    "algoan",
+    "filter"
+  ],
+  "author": "diephil",
+  "homepage": "https://github.com/algoan/nestjs-components/tree/master/packages/http-exception-filter#readme",
+  "license": "ISC",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": [
+    "dist/src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/algoan/nestjs-components.git",
+    "directory": "packages/http-exception-filter"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "jest",
+    "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --config ./jest.config.js",
+    "test:cov": "jest --coverage"
+  },
+  "bugs": {
+    "url": "https://github.com/algoan/nestjs-components/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=8",
+    "@nestjs/core": ">=8",
+    "@nestjs/platform-express": ">=8",
+    "class-validator": "*",
+    "express": ">=4",
+    "rxjs": ">=7"
+  }
+}

@@ -38,12 +38,14 @@
   "license": "ISC",
   "devDependencies": {
     "@algoan/eslint-config": "^2.1.1",
-    "@algoan/nestjs-google-pubsub-microservice": "file:../google-pubsub-microservice",
-    "@algoan/pubsub": "^6.1.2",
+    "@apollo/gateway": "^2.8.2",
+    "@apollo/server": "^4.10.4",
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
+    "@nestjs/apollo": "^12.2.0",
     "@nestjs/common": "^9.4.3",
     "@nestjs/core": "^9.4.2",
+    "@nestjs/graphql": "^12.2.0",
     "@nestjs/microservices": "^9.4.3",
     "@nestjs/platform-express": "^9.4.3",
     "@nestjs/testing": "^9.4.3",
@@ -62,7 +64,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.55.0",
     "express": "^4.18.2",
-    "google-pubsub-emulator": "^5.0.0",
+    "graphql": "^16.9.0",
     "husky": "^8.0.3",
     "jest": "^28.1.3",
     "lerna": "^8.1.2",
@@ -74,6 +76,7 @@
     "rxjs": "^7.8.1",
     "supertest": "^6.3.3",
     "ts-jest": "^28.0.7",
+    "ts-morph": "^21.0.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.4.2"
   },
@@ -89,13 +92,7 @@
     }
   },
   "dependencies": {
-    "@algoan/nestjs-class-transformers": "file:packages/class-transformers",
-    "@algoan/nestjs-class-validators": "file:packages/class-validators",
-    "@algoan/nestjs-custom-decorators": "file:packages/custom-decorators",
-    "@algoan/nestjs-google-pubsub-client": "file:packages/google-pubsub-client",
-    "@algoan/nestjs-google-pubsub-microservice": "file:packages/google-pubsub-microservice",
-    "@algoan/nestjs-http-exception-filter": "file:packages/http-exception-filter",
-    "@algoan/nestjs-logging-interceptor": "file:packages/logging-interceptor",
-    "@algoan/nestjs-pagination": "file:packages/pagination"
+    "@algoan/nestjs-gql-exception-filter": "file:packages/gql-exception-filter",
+    "@algoan/nestjs-gql-logging-interceptor": "file:packages/gql-logging-interceptor"
   }
 }

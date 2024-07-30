@@ -1,0 +1,766 @@
+/* eslint-disable max-lines */
+import {
+  BadRequestException,
+  HttpStatus,
+  INestApplication,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as request from 'supertest';
+import { ApplicationConfig } from '@nestjs/core';
+import { GqlLoggingInterceptor } from '../src';
+import { CatsModule } from './test-app/cats/cats.module';
+import { CoreModule } from './test-app/core/core.module';
+
+describe('GraphQL Logging interceptor', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [CoreModule, CatsModule],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
+    app.useLogger(Logger);
+
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Default behaviour', () => {
+    it('logs the input and output request details - OK status code', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const resCtx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+      const outgoingMsg: string = `Outgoing response - 200 - POST - ${url}`;
+
+      /**
+       * Info level
+       */
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: { query: '{ ok }' },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+      expect(logSpy.mock.calls[1]).toEqual([
+        {
+          message: outgoingMsg,
+          body: `This action returns all cats`,
+        },
+        resCtx,
+      ]);
+    });
+
+    it('logs the input and output request details - BAD_REQUEST status code', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const warnSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'warn');
+      const errorSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'error');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({ query: '{ badRequest }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'BAD_REQUEST',
+                  originalError: {
+                    message: 'Bad Request',
+                    statusCode: HttpStatus.BAD_REQUEST,
+                  },
+                },
+                locations: [
+                  {
+                    column: 3,
+                    line: 1,
+                  },
+                ],
+                message: 'Bad Request',
+                path: ['badRequest'],
+              },
+            ],
+            data: null,
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const resCtx: string = `GqlLoggingInterceptor - 400 - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+      const outgoingMsg: string = `Outgoing response - 400 - POST - ${url}`;
+
+      /**
+       * Info level
+       */
+      expect(logSpy).toBeCalledTimes(1);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: { query: '{ badRequest }' },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+
+      expect(warnSpy).toBeCalledTimes(1);
+      expect(warnSpy.mock.calls[0]).toEqual([
+        {
+          message: outgoingMsg,
+          method: 'POST',
+          url: '/',
+          body: { query: '{ badRequest }' },
+          error: expect.any(BadRequestException),
+        },
+        resCtx,
+      ]);
+
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it('logs the input and output request details - INTERNAL_SERVER_ERROR status code', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const warnSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'warn');
+      const errorSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'error');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({ query: '{ internalError }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'INTERNAL_SERVER_ERROR',
+                  originalError: {
+                    message: 'Internal Server Error',
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                  },
+                  status: HttpStatus.INTERNAL_SERVER_ERROR,
+                },
+                locations: [
+                  {
+                    column: 3,
+                    line: 1,
+                  },
+                ],
+                message: 'Internal Server Error',
+                path: ['internalError'],
+              },
+            ],
+            data: null,
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const resCtx: string = `GqlLoggingInterceptor - 500 - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+      const outgoingMsg: string = `Outgoing response - 500 - POST - ${url}`;
+
+      /**
+       * Info level
+       */
+      expect(logSpy).toBeCalledTimes(1);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: { query: '{ internalError }' },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+
+      expect(errorSpy).toBeCalledTimes(1);
+      expect(errorSpy.mock.calls[0]).toEqual([
+        {
+          message: outgoingMsg,
+          method: 'POST',
+          url: '/',
+          body: { query: '{ internalError }' },
+          error: expect.any(InternalServerErrorException),
+        },
+        expect.any(String),
+        resCtx,
+      ]);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('@Log - Masking options', () => {
+    const placeholder = '****';
+
+    it('allows to mask given properties of the request body', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query:
+            'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+                enemies: ['Jerry', 'Titi'],
+                interests: [
+                  { description: 'Eating Jerry', level: 'HIGH' },
+                  { description: 'Sleeping', level: 'MEDIUM' },
+                ],
+                address: {
+                  city: 'New York',
+                  country: 'USA',
+                },
+              },
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: {
+            query: `mutation { createCat ( payload : { name : "Tom" birthdate : ${placeholder} enemies : [ ${placeholder} ] interests : [ { description : "Eating Jerry" level : "HIGH" } { description : "Sleeping" level : "MEDIUM" } ] address : { ${placeholder} } } ) { id name birthdate address { country city } enemies interests { description level } } }`,
+          },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+    });
+
+    it('allows to mask the whole request body', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: 'mutation { createPassword ( id: 1 password: "secret password" ) }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createPassword: 'The password for cat 1 is secret password',
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: { query: placeholder },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+    });
+
+    it('allows to mask given properties of the response body', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query:
+            'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+                enemies: ['Jerry', 'Titi'],
+                interests: [
+                  { description: 'Eating Jerry', level: 'HIGH' },
+                  { description: 'Sleeping', level: 'MEDIUM' },
+                ],
+                address: {
+                  city: 'New York',
+                  country: 'USA',
+                },
+              },
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
+      const outgoingMsg: string = `Outgoing response - 200 - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[1]).toEqual([
+        {
+          body: {
+            id: placeholder,
+            name: 'Tom',
+            birthdate: placeholder,
+            enemies: placeholder,
+            interests: [
+              { description: placeholder, level: 'HIGH' },
+              { description: placeholder, level: 'MEDIUM' },
+            ],
+            address: placeholder,
+          },
+          message: outgoingMsg,
+        },
+        ctx,
+      ]);
+    });
+
+    it('allows to mask the whole response body', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: 'mutation { createPassword ( id: 1 password: "secret password" ) }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createPassword: 'The password for cat 1 is secret password',
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - 200 - POST - ${url}`;
+      const outgoingMsg: string = `Outgoing response - 200 - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[1]).toEqual([
+        {
+          body: placeholder,
+          message: outgoingMsg,
+        },
+        ctx,
+      ]);
+    });
+
+    it('should ignore unknown properties', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: '{ getCats { id name interests { description level } } }',
+        })
+        .expect(HttpStatus.OK);
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[1][0].body).toEqual([
+        {
+          id: 1,
+          name: 'Tom',
+          interests: [
+            { description: placeholder, level: 'HIGH' },
+            { description: placeholder, level: 'MEDIUM' },
+          ],
+        },
+        {
+          id: 2,
+          name: 'Sylvestre',
+          interests: [{ description: placeholder, level: 'HIGH' }],
+        },
+      ]);
+    });
+
+    it("shouldn't mask anything if masking is disabled", async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setDisableMasking(true);
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      const newCat = {
+        name: 'Tom',
+        birthdate: '1980-01-01',
+        enemies: ['Jerry', 'Titi'],
+        interests: [
+          { description: 'Eating Jerry', level: 'HIGH' },
+          { description: 'Sleeping', level: 'MEDIUM' },
+        ],
+        address: { country: 'USA', city: 'New York' },
+      };
+      const newCatQuery = {
+        query:
+          'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" enemies: ["Jerry" "Titi"] interests: [ { description: "Eating Jerry" level: "HIGH" } { description: "Sleeping" level: "MEDIUM" } ] address: { country: "USA" city: "New York" } } ) { id name birthdate address { country city } enemies interests { description level } } }',
+      };
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send(newCatQuery)
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: { ...newCat, id: 1 },
+            },
+          }),
+        );
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[0][0].body).toEqual(newCatQuery);
+
+      expect(logSpy.mock.calls[1][0].body).toEqual({ ...newCat, id: 1 });
+
+      interceptor.setDisableMasking(false);
+    });
+
+    it('should be possible to change the masking placeholder', async () => {
+      const customPlaceholder = undefined;
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMaskingPlaceholder(customPlaceholder);
+
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: 'mutation { createCat ( payload: { name: "Tom" birthdate: "1980-01-01" } ) { id name birthdate } }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              createCat: {
+                id: 1,
+                name: 'Tom',
+                birthdate: '1980-01-01',
+              },
+            },
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(2);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: {
+            query:
+              'mutation { createCat ( payload : { name : "Tom" birthdate : "1980-01-01" } ) { id name birthdate } }',
+          },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+
+      interceptor.setMaskingPlaceholder(placeholder);
+    });
+
+    it('should mask http exception response', async () => {
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+      const url: string = '/';
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({
+          query: 'mutation { createCat ( payload: { name: "dog" birthdate: "1980-01-01" } ) { id name birthdate } }',
+        })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            errors: [
+              {
+                extensions: {
+                  code: 'BAD_REQUEST',
+                  originalError: {
+                    error: 'Bad Request',
+                    message: 'You cannot name a cat dog',
+                    statusCode: HttpStatus.BAD_REQUEST,
+                  },
+                },
+                locations: [
+                  {
+                    column: 12,
+                    line: 1,
+                  },
+                ],
+                message: 'You cannot name a cat dog',
+                path: ['createCat'],
+              },
+            ],
+            data: null,
+          }),
+        );
+
+      const ctx: string = `GqlLoggingInterceptor - POST - ${url}`;
+      const incomingMsg: string = `Incoming request - POST - ${url}`;
+
+      expect(logSpy).toBeCalledTimes(1);
+      expect(logSpy.mock.calls[0]).toEqual([
+        {
+          body: {
+            query: 'mutation { createCat ( payload : { name : "dog" birthdate : **** } ) { id name birthdate } }',
+          },
+          headers: expect.any(Object),
+          message: incomingMsg,
+          method: `POST`,
+        },
+        ctx,
+      ]);
+    });
+  });
+
+  describe('GqlLoggingInterceptor - Getters and setters', () => {
+    it('allows to set and get a user prefix', async () => {
+      const interceptor = new GqlLoggingInterceptor();
+      const prefix = 'MyPrefix';
+      interceptor.setUserPrefix(prefix);
+      expect(interceptor.getUserPrefix()).toEqual(`${prefix} - `);
+    });
+
+    it('allows to set and get the disable masking flag', async () => {
+      const interceptor = new GqlLoggingInterceptor();
+      interceptor.setDisableMasking(true);
+      expect(interceptor.getDisabledMasking()).toEqual(true);
+    });
+
+    it('allows to set and get the masking placeholder', async () => {
+      const interceptor = new GqlLoggingInterceptor();
+      const placeholder = '****';
+      interceptor.setMaskingPlaceholder(placeholder);
+      expect(interceptor.getMaskingPlaceholder()).toEqual(placeholder);
+    });
+
+    it('allows to set and get the masking options', async () => {
+      const interceptor = new GqlLoggingInterceptor();
+      const mask = {
+        requestHeader: {
+          authorization: true,
+        },
+      };
+      interceptor.setMask(mask);
+      expect(interceptor.getMask()).toEqual(mask);
+    });
+  });
+
+  describe('GqlLoggingInterceptor - Masking options', () => {
+    const placeholder = '****';
+
+    it('allows to mask the whole content of a request header', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({ requestHeader: { authorization: true } });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'access-token')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toEqual(placeholder);
+    });
+
+    it('allows to mask a request header with a specific handler function', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({
+        requestHeader: {
+          authorization: (header: string | string[]) => {
+            if (typeof header === 'string') {
+              const [type, value] = header.split(' ');
+
+              return { type, value };
+            } else {
+              return header;
+            }
+          },
+        },
+      });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'Bearer JWT')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toEqual({
+        type: 'Bearer',
+        value: 'JWT',
+      });
+    });
+
+    it('should not mask a request header if the corresponding mask is undefined', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({ requestHeader: {} });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'Bearer JWT')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
+    });
+
+    it('should not mask a request header if the corresponding mask is false', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({ requestHeader: { authorization: false } });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'Bearer JWT')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
+    });
+
+    it('should not modify the request header if it is not passed with the request but defined in masking option', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({ requestHeader: { authorization: true } });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toBeUndefined();
+    });
+
+    it('should not fail if the masking function throws an error and mask the whole header as fallback', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({
+        requestHeader: {
+          authorization: () => {
+            throw new Error('This is an error');
+          },
+        },
+      });
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'Bearer JWT')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toBe(placeholder);
+    });
+
+    it('should not mask request headers if masking is disabled', async () => {
+      const interceptor = app.get(ApplicationConfig).getGlobalInterceptors()[0] as GqlLoggingInterceptor;
+      interceptor.setMask({ requestHeader: { authorization: true } });
+      interceptor.setDisableMasking(true);
+      const logSpy: jest.SpyInstance = jest.spyOn(Logger.prototype, 'log');
+
+      await request(app.getHttpServer())
+        .post('/graphql')
+        .set('authorization', 'Bearer JWT')
+        .send({ query: '{ ok }' })
+        .expect(HttpStatus.OK)
+        .expect(({ body }) =>
+          expect(body).toEqual({
+            data: {
+              ok: 'This action returns all cats',
+            },
+          }),
+        );
+
+      expect(logSpy.mock.calls[0][0].headers.authorization).toBe('Bearer JWT');
+    });
+  });
+});
